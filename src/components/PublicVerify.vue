@@ -11,7 +11,7 @@
       <div class="invalid-card">
         <div class="invalid-icon">✕</div>
         <h2>Sertifikat Tidak Valid</h2>
-        <p>Hash tidak ditemukan dalam sistem blockchain kami.</p>
+        <p>Data sertifikat tidak ditemukan dalam sistem kami.</p>
         <button @click="$router.push('/')">Kembali ke Beranda</button>
       </div>
     </div>
@@ -34,7 +34,6 @@
         </button>
       </div>
 
-      <!-- CERTIFICATE BODY -->
       <div class="cert" id="certificate">
         <div class="border-top"></div>
 
@@ -54,12 +53,7 @@
             <p class="cert-title">SERTIFIKAT</p>
             <p class="cert-subtitle">Certificate of Participation</p>
           </div>
-          <div class="header-right">
-            <div class="cert-number">
-              <span class="cert-no-label">No.</span>
-              <span class="cert-no-val">{{ data.cert_hash ? data.cert_hash.substring(0, 8).toUpperCase() : '-' }}</span>
-            </div>
-          </div>
+          <div class="header-right"></div>
         </div>
 
         <div class="deco-lines">
@@ -95,12 +89,7 @@
         </div>
 
         <div class="cert-footer">
-          <div class="footer-left">
-            <div class="qr-wrap">
-              <img :src="qrUrl" alt="QR Verifikasi" class="qr-img" />
-              <p class="qr-label">Scan untuk verifikasi</p>
-            </div>
-          </div>
+          <div class="footer-left"></div>
           <div class="footer-center">
             <div class="seal">
               <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
@@ -113,10 +102,9 @@
             </div>
           </div>
           <div class="footer-right">
-            <div class="hash-box">
-              <p class="hash-label">Blockchain Hash</p>
-              <p class="hash-val">{{ data.cert_hash }}</p>
-              <p class="hash-label" style="margin-top:6px">Verified by VeriZh Chain</p>
+            <div class="qr-wrap">
+              <img :src="qrUrl" alt="QR Verifikasi" class="qr-img" />
+              <p class="qr-label">Scan untuk verifikasi</p>
             </div>
           </div>
         </div>
@@ -360,23 +348,6 @@ export default {
   color: #7a6a4f;
   letter-spacing: 1px;
 }
-.cert-number { text-align: right; }
-.cert-no-label {
-  display: block;
-  font-size: 9px;
-  color: #94a3b8;
-  font-family: sans-serif;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-.cert-no-val {
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  color: #1e3a5f;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
 
 .cert-body {
   padding: 24px 60px 20px;
@@ -470,15 +441,20 @@ export default {
 
 .cert-footer {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  padding: 12px 44px 20px;
+  padding: 20px 44px 24px;
   gap: 20px;
 }
 .footer-left, .footer-right { flex: 1; }
 .footer-center { flex: 0 0 auto; }
 
-.qr-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
 .qr-img {
   width: 90px; height: 90px;
   border: 1px solid rgba(30,58,95,0.2);
@@ -494,31 +470,9 @@ export default {
 
 .seal { display: flex; justify-content: center; }
 
-.hash-box { text-align: right; }
-.hash-label {
-  font-size: 9px;
-  font-family: sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #94a3b8;
-  margin-bottom: 3px;
-}
-.hash-val {
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
-  color: #1e3a5f;
-  word-break: break-all;
-  opacity: 0.6;
-  line-height: 1.5;
-}
-
 @media print {
   .no-print { display: none !important; }
-  .page-wrap {
-    background: white;
-    padding: 0;
-    min-height: auto;
-  }
+  .page-wrap { background: white; padding: 0; min-height: auto; }
   .cert { box-shadow: none; }
   .cert-outer { max-width: 100%; }
   @page { size: A4 landscape; margin: 8mm; }
@@ -527,13 +481,11 @@ export default {
 @media (max-width: 640px) {
   .cert-header { flex-direction: column; align-items: center; padding: 20px 20px 10px; }
   .header-left, .header-right { flex: none; }
-  .header-right { display: none; }
   .cert-body { padding: 20px 24px; }
   .recipient-name { font-size: 32px; }
   .meta-grid { flex-direction: column; }
   .meta-divider { width: 80%; height: 1px; }
   .cert-footer { flex-direction: column; align-items: center; padding: 16px 24px; }
-  .hash-box { text-align: center; }
   .qr-wrap { align-items: center; }
 }
 </style>
