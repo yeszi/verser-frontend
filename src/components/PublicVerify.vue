@@ -30,6 +30,18 @@
             <p class="text-[9px] font-black text-indigo-300 uppercase mb-1">Lokasi</p>
             <p class="text-sm font-bold text-gray-700 leading-snug">{{ data.nama_lokasi }}</p>
           </div>
+          <div>
+            <p class="text-[9px] font-black text-indigo-300 uppercase mb-1">Waktu Mulai</p>
+            <p class="text-sm font-bold text-gray-700 leading-snug">{{ formatDate(data.waktu_mulai) }}</p>
+          </div>
+          <div>
+            <p class="text-[9px] font-black text-indigo-300 uppercase mb-1">Waktu Selesai</p>
+            <p class="text-sm font-bold text-gray-700 leading-snug">{{ formatDate(data.waktu_selesai) }}</p>
+          </div>
+          <div v-if="data.keterangan" class="col-span-2">
+            <p class="text-[9px] font-black text-indigo-300 uppercase mb-1">Keterangan</p>
+            <p class="text-sm text-gray-700 leading-snug">{{ data.keterangan }}</p>
+          </div>
         </div>
 
         <div class="space-y-4">
@@ -41,6 +53,13 @@
             <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Previous Block Link</p>
             <p class="text-[9px] font-mono break-all text-slate-600">{{ data.previous_hash }}</p>
           </div>
+        </div>
+
+        <!-- QR CODE di halaman verify -->
+        <div class="flex flex-col items-center pt-2">
+          <p class="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-3">QR Verifikasi</p>
+          <img :src="qrCodeUrl" alt="QR Code" class="w-36 h-36 rounded-2xl border border-gray-100 shadow-sm" />
+          <p class="text-[9px] text-gray-400 mt-2 text-center">Scan untuk verifikasi ulang</p>
         </div>
       </div>
 
@@ -59,7 +78,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 
@@ -70,6 +89,20 @@ export default {
     const loading = ref(true)
     const API_URL = 'https://verser-chain.vercel.app'
 
+    const qrCodeUrl = computed(() => {
+      if (!data.value) return ''
+      const url = window.location.href
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`
+    })
+
+    const formatDate = (val) => {
+      if (!val) return '-'
+      return new Date(val).toLocaleString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      })
+    }
+
     onMounted(async () => {
       try {
         const hash = route.params.hash
@@ -77,11 +110,14 @@ export default {
         if (res.data.status === 'VALID') {
           data.value = res.data.data
         }
-      } catch (e) { console.error("Verify Error:", e) }
-      finally { loading.value = false }
+      } catch (e) {
+        console.error('Verify Error:', e)
+      } finally {
+        loading.value = false
+      }
     })
 
-    return { data, loading }
+    return { data, loading, qrCodeUrl, formatDate }
   }
 }
 </script>

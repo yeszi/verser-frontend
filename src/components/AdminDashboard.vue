@@ -25,10 +25,6 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="md:col-span-2">
-            <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Nama Lengkap Peserta</label>
-            <input v-model="form.nama_peserta" type="text" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" placeholder="Masukkan nama peserta..." />
-          </div>
-          <div class="md:col-span-2">
             <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Nama Acara / Event</label>
             <input v-model="form.nama_event" type="text" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" placeholder="Contoh: Webinar Blockchain 2026" />
           </div>
@@ -39,7 +35,7 @@
           <div>
             <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
               Koordinat GPS
-              <span v-if="gpsStatus" :class="gpsStatus.includes('') ? 'text-emerald-500' : 'text-red-400'" class="ml-2 normal-case font-normal">{{ gpsStatus }}</span>
+              <span v-if="gpsStatus" class="ml-2 normal-case font-normal text-emerald-500">{{ gpsStatus }}</span>
             </label>
             <div class="flex space-x-2">
               <input v-model="form.latitude" type="text" placeholder="Latitude" class="w-1/2 p-4 bg-gray-50 border border-gray-200 rounded-2xl text-sm" />
@@ -58,6 +54,10 @@
             <input v-model="form.waktu_selesai" type="datetime-local" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
           </div>
           <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Nama Lengkap Peserta</label>
+            <input v-model="form.nama_peserta" type="text" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" placeholder="Masukkan nama peserta..." />
+          </div>
+          <div class="md:col-span-2">
             <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Keterangan Tambahan</label>
             <textarea v-model="form.keterangan" rows="3" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" placeholder="Tuliskan keterangan sertifikat..."></textarea>
           </div>
@@ -70,19 +70,31 @@
         </button>
       </div>
 
+      <!-- HASIL SUKSES + QR CODE -->
       <div v-if="result" class="mt-8 bg-emerald-50 p-8 rounded-3xl border-2 border-emerald-200">
-        <h3 class="text-lg font-bold text-emerald-800 flex items-center mb-4">
+        <h3 class="text-lg font-bold text-emerald-800 flex items-center mb-6">
           <span class="mr-2">🛡️</span> Sertifikat Berhasil Disimpan
         </h3>
-        <div class="space-y-4">
-          <div class="bg-white p-4 rounded-xl border border-emerald-100">
-            <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Digital Signature Hash</p>
-            <p class="text-xs font-mono break-all font-bold text-indigo-600 mt-1">{{ result.hash }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-emerald-100">
+              <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Digital Signature Hash</p>
+              <p class="text-xs font-mono break-all font-bold text-indigo-600">{{ result.hash }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-emerald-100">
+              <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Link Verifikasi</p>
+              <code class="text-[10px] bg-gray-50 p-2 rounded-lg block break-all text-gray-500 mb-3">{{ verifyUrl }}</code>
+              <button @click="goToVerify(result.hash)" class="w-full py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition">
+                Lihat Sertifikat Publik →
+              </button>
+            </div>
           </div>
-          <div class="p-6 bg-white rounded-2xl border border-emerald-100 text-center">
-            <p class="text-sm text-gray-600 mb-4">Gunakan link verifikasi ini:</p>
-            <code class="text-[10px] bg-gray-50 p-3 rounded-lg block break-all mb-4 text-gray-500">{{ verifyUrl }}</code>
-            <a :href="verifyUrl" target="_blank" class="inline-block px-6 py-2 bg-indigo-600 text-white text-sm font-bold rounded-full hover:bg-indigo-700 transition">Lihat Sertifikat Publik</a>
+          <!-- QR CODE -->
+          <div class="bg-white p-6 rounded-xl border border-emerald-100 flex flex-col items-center justify-center">
+            <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-4">QR Code Verifikasi</p>
+            <img :src="qrCodeUrl" alt="QR Code" class="w-48 h-48 rounded-xl border border-gray-100 shadow-sm" />
+            <p class="text-[10px] text-gray-400 mt-3 text-center">Scan untuk verifikasi sertifikat</p>
+            <a :href="qrCodeUrl" download="qrcode-sertifikat.png" class="mt-3 text-xs text-indigo-600 font-bold hover:underline">⬇ Download QR Code</a>
           </div>
         </div>
       </div>
@@ -148,9 +160,9 @@
                   </span>
                 </td>
                 <td class="px-4 py-4">
-                  <a :href="'/verify/' + row.cert_hash" target="_blank" class="inline-block px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition whitespace-nowrap">
+                  <button @click="goToVerify(row.cert_hash)" class="inline-block px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition whitespace-nowrap cursor-pointer">
                     Lihat
-                  </a>
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -174,11 +186,13 @@ export default {
       result: null,
       errorMsg: null,
       verifyUrl: '',
+      qrCodeUrl: '',
       API_URL: 'https://verser-chain.vercel.app',
       form: {
-        nama_peserta: '', nama_event: '', nama_lokasi: '',
-        latitude: '', longitude: '', waktu_mulai: '',
-        waktu_selesai: '', keterangan: ''
+        nama_event: '', nama_lokasi: '',
+        latitude: '', longitude: '',
+        waktu_mulai: '', waktu_selesai: '',
+        nama_peserta: '', keterangan: ''
       },
       tableData: [],
       tableLoading: false,
@@ -204,6 +218,10 @@ export default {
   },
 
   methods: {
+    goToVerify(hash) {
+      this.$router.push({ name: 'verify', params: { hash } })
+    },
+
     switchToData() {
       this.activeTab = 'data'
       this.fetchData()
@@ -239,7 +257,7 @@ export default {
         (pos) => {
           this.form.latitude = pos.coords.latitude.toFixed(7)
           this.form.longitude = pos.coords.longitude.toFixed(7)
-          this.gpsStatus = 'Lokasi berhasil didapat'
+          this.gpsStatus = 'Lokasi berhasil didapat ✓'
           this.gpsLoading = false
         },
         () => {
@@ -252,11 +270,11 @@ export default {
 
     async submitCert() {
       this.errorMsg = null
-      if (!this.form.nama_peserta) return (this.errorMsg = 'Nama peserta wajib diisi!')
       if (!this.form.nama_event) return (this.errorMsg = 'Nama event wajib diisi!')
       if (!this.form.nama_lokasi) return (this.errorMsg = 'Lokasi kegiatan wajib diisi!')
       if (!this.form.waktu_mulai) return (this.errorMsg = 'Waktu mulai wajib diisi!')
       if (!this.form.waktu_selesai) return (this.errorMsg = 'Waktu selesai wajib diisi!')
+      if (!this.form.nama_peserta) return (this.errorMsg = 'Nama peserta wajib diisi!')
       this.loading = true
       try {
         const payload = {
@@ -267,7 +285,8 @@ export default {
         const res = await axios.post(this.API_URL + '/issue-sertifikat', payload)
         this.result = res.data
         this.verifyUrl = window.location.origin + '/verify/' + res.data.hash
-        this.form = { nama_peserta: '', nama_event: '', nama_lokasi: '', latitude: '', longitude: '', waktu_mulai: '', waktu_selesai: '', keterangan: '' }
+        this.qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(this.verifyUrl)}`
+        this.form = { nama_event: '', nama_lokasi: '', latitude: '', longitude: '', waktu_mulai: '', waktu_selesai: '', nama_peserta: '', keterangan: '' }
         this.gpsStatus = ''
       } catch (err) {
         this.errorMsg = (err.response && err.response.data && err.response.data.message) || err.message || 'Terjadi kesalahan.'

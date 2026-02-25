@@ -1,53 +1,67 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-900">
-    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">VeriZh Chain</h1>
-        <p class="text-gray-600 mt-2">Digital Certificate Verification System</p>
+  <div class="root">
+    <div class="card">
+
+      <div class="top">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L22 7V17L12 22L2 17V7L12 2Z" stroke="#6366f1" stroke-width="1.8"/>
+            <path d="M12 8L16 10.5V15L12 17.5L8 15V10.5L12 8Z" fill="#6366f1" opacity="0.25"/>
+            <circle cx="12" cy="12" r="2.2" fill="#6366f1"/>
+          </svg>
+        </div>
+        <h1>VeriZh Chain</h1>
+        <p>Masuk ke panel admin</p>
       </div>
-      
-      <div v-if="error" class="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-        {{ error }}
-      </div>
-      
-      <form @submit.prevent="handleLogin">
-        <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2">Username</label>
-          <input 
-            v-model="username" 
-            type="text" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+      <div v-if="error" class="error-box">{{ error }}</div>
+
+      <form @submit.prevent="handleLogin" class="form">
+        <div class="field">
+          <label>Username</label>
+          <input
+            v-model="username"
+            type="text"
             placeholder="Masukkan username"
             required
+            :class="{ focused: focused === 'u' }"
+            @focus="focused = 'u'"
+            @blur="focused = null"
           />
         </div>
-        
-        <div class="mb-6">
-          <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-          <input 
-            v-model="password" 
-            type="password" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Masukkan password"
-            required
-          />
+
+        <div class="field">
+          <label>Password</label>
+          <div class="pw-wrap" :class="{ focused: focused === 'p' }">
+            <input
+              v-model="password"
+              :type="showPw ? 'text' : 'password'"
+              placeholder="Masukkan password"
+              required
+              @focus="focused = 'p'"
+              @blur="focused = null"
+            />
+            <button type="button" class="eye" @click="showPw = !showPw" tabindex="-1">
+              <svg v-if="!showPw" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="#94a3b8" stroke-width="1.3"/>
+                <circle cx="8" cy="8" r="2" stroke="#94a3b8" stroke-width="1.3"/>
+              </svg>
+              <svg v-else width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M2 2l12 12M6.5 6.6A2 2 0 0 0 9.4 9.5M4.2 4.3C2.8 5.3 1.7 6.8 1 8c1.3 2.5 4 5 7 5a7 7 0 0 0 3.8-1.2M7 3.1A7.3 7.3 0 0 1 8 3c3 0 5.7 2.5 7 5a9 9 0 0 1-1.5 2.2" stroke="#94a3b8" stroke-width="1.3" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
-        
-        <button 
-          type="submit" 
-          :disabled="loading"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50"
-        >
-          {{ loading ? 'Logging in...' : 'Login' }}
+
+        <button type="submit" class="btn" :disabled="loading">
+          <span v-if="!loading">Masuk</span>
+          <span v-else class="spin-row">
+            <span class="spinner"></span> Memverifikasi...
+          </span>
         </button>
       </form>
-      
-      <button 
-        @click="testConnection" 
-        class="w-full mt-4 text-sm text-gray-500 hover:text-gray-700"
-      >
-        Test Connection
-      </button>
+
+      <p class="footer">UMRAH Informatics Engineering • 2026</p>
     </div>
   </div>
 </template>
@@ -63,37 +77,26 @@ export default {
       username: '',
       password: '',
       loading: false,
-      error: null
+      error: null,
+      focused: null,
+      showPw: false
     }
   },
   methods: {
-    async testConnection() {
-      try {
-        this.error = null
-        const res = await axios.get(`${API_BASE_URL}/`)
-        alert('✅ Connected! ' + JSON.stringify(res.data))
-      } catch (err) {
-        this.error = `❌ Cannot connect: ${err.message}`
-      }
-    },
-    
     async handleLogin() {
       try {
         this.error = null
         this.loading = true
-        
         const response = await axios.post(`${API_BASE_URL}/login`, {
           username: this.username,
           password: this.password
         })
-        
         if (response.data.success) {
           localStorage.setItem('token', response.data.token)
           this.$router.push('/admin')
         } else {
-          throw new Error(response.data.message || 'Login failed')
+          throw new Error(response.data.message || 'Login gagal')
         }
-        
       } catch (err) {
         this.error = err.response?.data?.message || err.message
       } finally {
@@ -103,3 +106,183 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  padding: 24px;
+}
+
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px 36px 32px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.04), 0 20px 40px rgba(0,0,0,0.06);
+  animation: up 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.top {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.icon {
+  width: 52px; height: 52px;
+  background: #eef2ff;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.top h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.top p {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #ef4444;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+.field input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+.field input::placeholder { color: #cbd5e1; }
+.field input:focus, .field input.focused {
+  border-color: #6366f1;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+.pw-wrap {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  padding-right: 12px;
+}
+.pw-wrap.focused {
+  border-color: #6366f1;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.pw-wrap input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 11px 14px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+}
+.pw-wrap input::placeholder { color: #cbd5e1; }
+.eye {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 13px;
+  background: #6366f1;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+  box-shadow: 0 2px 12px rgba(99,102,241,0.25);
+}
+.btn:hover:not(:disabled) {
+  background: #4f46e5;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+  transform: translateY(-1px);
+}
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.spin-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.spinner {
+  width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.footer {
+  text-align: center;
+  font-size: 10px;
+  color: #cbd5e1;
+  margin-top: 24px;
+  letter-spacing: 0.3px;
+}
+</style>
