@@ -1,5 +1,5 @@
 // src/config/api.js
-const API_BASE_URL = 'https://vadser-chain.vercel.app'  
+const API_BASE_URL = 'https://verser-chain.vercel.app'  
 
 export const API_ENDPOINTS = {
   LOGIN: `${API_BASE_URL}/login`,
