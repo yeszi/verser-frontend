@@ -796,18 +796,44 @@ td { padding: 12px 12px; }
   .sidebar-close { display: flex; margin-left: auto; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 16px; cursor: pointer; padding: 4px; }
   .overlay { display: block; }
   .hamburger { display: flex; }
-  .content { padding: 16px; }
-  .form-grid { grid-template-columns: 1fr; }
+  .content { padding: 12px; }
+  .tab-panel { max-width: 100%; }
+
+  /* Form responsive */
+  .form-card { padding: 18px; }
+  .form-grid { grid-template-columns: 1fr; gap: 14px; }
   .field.full { grid-column: 1; }
+  .gps-inputs { flex-direction: column; gap: 8px; }
+  .gps-inputs input { width: 100%; }
+
+  /* Result card responsive */
   .result-body { flex-direction: column; }
-  .qr-block { align-items: flex-start; }
-  .data-header { flex-direction: column; align-items: flex-start; }
+  .result-card { margin-top: 16px; }
+  .result-header { padding: 14px 16px; }
+  .result-body { padding: 16px; }
+  .result-info { width: 100%; }
+  .qr-block { align-items: center; width: 100%; }
+  .info-hash { font-size: 10px; word-break: break-all; }
+  .info-url { font-size: 9px; word-break: break-all; }
+  .verify-btn { width: 100%; text-align: center; }
+
+  /* Data tab responsive */
+  .data-card { padding: 16px; }
+  .data-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .data-actions { width: 100%; flex-direction: column; align-items: stretch; }
+  .search-wrap { width: 100%; }
+  .search-wrap input { width: 100%; flex: 1; }
+  .refresh-btn { width: 100%; justify-content: center; }
   .table-wrap { display: none; }
   .mobile-cards { display: block; }
   .topbar { padding: 12px 16px; }
+  .submit-btn { font-size: 13px; padding: 13px; }
 }
 
 @media (max-width: 480px) {
-  .search-wrap input { width: 130px; }
+  .content { padding: 10px; }
+  .form-card { padding: 14px; }
+  .field input, .field textarea { font-size: 13px; padding: 10px 12px; }
+  .result-header { flex-wrap: wrap; gap: 8px; }
 }
 </style>
