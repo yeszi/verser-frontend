@@ -1,12 +1,10 @@
 <template>
   <div class="page-wrap">
-    <!-- LOADING -->
     <div v-if="loading" class="loading-screen">
       <div class="spinner"></div>
       <p>Memverifikasi sertifikat...</p>
     </div>
 
-    <!-- INVALID -->
     <div v-else-if="!data" class="invalid-screen">
       <div class="invalid-card">
         <div class="invalid-icon">✕</div>
@@ -16,7 +14,6 @@
       </div>
     </div>
 
-    <!-- VALID -->
     <div v-else class="cert-outer">
       <div class="print-bar no-print">
         <div class="valid-badge">
@@ -145,7 +142,12 @@ export default {
       })
     }
 
-    const printCert = () => window.print()
+    const printCert = () => {
+      const originalTitle = document.title
+      document.title = `Sertifikat - ${data.value.nama_peserta} - ${data.value.nama_event}`
+      window.print()
+      document.title = originalTitle
+    }
 
     onMounted(async () => {
       try {
