@@ -1,38 +1,40 @@
-# .
+# VeriZh Chain 🔗
+A Lightweight Blockchain-based Digital Certificate Verification System.
 
-This template should help get you started developing with Vue 3 in Vite.
+Built with **Vue.js** (Frontend) + **Flask** (Backend) + **Supabase** (Database), deployed on **Vercel**.
 
-## Recommended IDE Setup
+---
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Live Demo
+- Frontend: [verser-phi.vercel.app](https://verser-phi.vercel.app)
+- Backend API: [verser-chain.vercel.app](https://verser-chain.vercel.app)
 
-## Recommended Browser Setup
+---
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## How It Works
+1. Admin logs in and issues a certificate → system generates a SHA-256 hash
+2. A QR Code is created from the certificate's verify URL
+3. Anyone can scan the QR Code to verify the certificate — no login required
 
-## Customize configuration
+---
 
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+## Environment Variables
+```env
+SUPABASE_URL=
+SUPABASE_KEY=
+ADMIN_USERNAME=
+ADMIN_PASSWORD=
+JWT_SECRET=
 ```
 
-### Compile and Hot-Reload for Development
+---
 
-```sh
-npm run dev
-```
+## Tech Stack
+- **Frontend** — Vue.js 3, Vue Router
+- **Backend** — Python, Flask, PyJWT, Flask-Limiter
+- **Database** — Supabase (PostgreSQL)
+- **Deployment** — Vercel
 
-### Compile and Minify for Production
+---
 
-```sh
-npm run build
-```
+**Grayesi Silitonga** — Informatics Engineering, UMRAH 2026
