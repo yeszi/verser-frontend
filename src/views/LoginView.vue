@@ -1,13 +1,12 @@
 <template>
   <div class="root">
 
-    <!-- Halaman Utama -->
     <div class="hero">
       <div class="hero-icon">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L22 7V17L12 22L2 17V7L12 2Z" stroke="#6366f1" stroke-width="1.8"/>
-          <path d="M12 8L16 10.5V15L12 17.5L8 15V10.5L12 8Z" fill="#6366f1" opacity="0.25"/>
-          <circle cx="12" cy="12" r="2.2" fill="#6366f1"/>
+          <path d="M12 2L22 7V17L12 22L2 17V7L12 2Z" stroke="#0ea5e9" stroke-width="1.8"/>
+          <path d="M12 8L16 10.5V15L12 17.5L8 15V10.5L12 8Z" fill="#0ea5e9" opacity="0.25"/>
+          <circle cx="12" cy="12" r="2.2" fill="#0ea5e9"/>
         </svg>
       </div>
       <h1>VeriZh Chain</h1>
@@ -27,7 +26,7 @@
       <p class="hint-text">Scan QR Code pada sertifikat untuk verifikasi keasliannya</p>
     </div>
 
-    <!-- Tombol Gembok Admin (pojok kanan bawah) -->
+
     <button class="lock-fab" @click="showLogin = true" title="Admin Login">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
@@ -35,19 +34,18 @@
       </svg>
     </button>
 
-    <!-- Pop Up Login Admin -->
     <div v-if="showLogin" class="modal-overlay" @click.self="showLogin = false">
       <div class="modal-card">
         <div class="modal-header">
           <div class="modal-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="5" y="11" width="14" height="10" rx="2" stroke="#6366f1" stroke-width="1.8"/>
-              <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round"/>
+              <rect x="5" y="11" width="14" height="10" rx="2" stroke="#0ea5e9" stroke-width="1.8"/>
+              <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
           </div>
           <div>
-            <p class="modal-title">Admin Login</p>
-            <p class="modal-sub">VeriZh Chain</p>
+            <p class="modal-title">Form Login</p>
+            <p class="modal-sub">Hanya Untuk Pemegang Hak Akses</p>
           </div>
           <button class="modal-close" @click="showLogin = false">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -84,7 +82,7 @@
           </button>
         </form>
 
-        <p class="footer">UMRAH Informatics Engineering • 2026</p>
+        <p class="footer">Made By Student Informatics Engineering</p>
       </div>
     </div>
 
@@ -255,7 +253,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f1f5f9 0%, #eef2ff 100%);
+  background: linear-gradient(135deg, #f1f5f9 0%, #e0f2fe 100%);
   font-family: 'Plus Jakarta Sans', sans-serif;
   padding: 24px;
   position: relative;
@@ -281,7 +279,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(99,102,241,0.15);
+  box-shadow: 0 4px 20px rgba(14,165,233,0.15);
   margin-bottom: 4px;
 }
 .hero h1 {
@@ -308,7 +306,7 @@ export default {
   gap: 10px;
   margin-top: 20px;
   padding: 16px 32px;
-  background: #6366f1;
+  background: #0ea5e9;
   border: none;
   border-radius: 14px;
   color: white;
@@ -317,12 +315,12 @@ export default {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.18s;
-  box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+  box-shadow: 0 4px 20px rgba(14,165,233,0.3);
 }
 .scan-btn:hover {
-  background: #4f46e5;
+  background: #0284c7;
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(99,102,241,0.4);
+  box-shadow: 0 8px 28px rgba(14,165,233,0.4);
 }
 
 .hint-text {
@@ -350,9 +348,9 @@ export default {
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 .lock-fab:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-  box-shadow: 0 4px 16px rgba(99,102,241,0.2);
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+  box-shadow: 0 4px 16px rgba(14,165,233,0.2);
 }
 
 /* Modal Overlay */
@@ -386,7 +384,7 @@ export default {
 }
 .modal-icon {
   width: 38px; height: 38px;
-  background: #eef2ff;
+  background: #e0f2fe;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -439,9 +437,9 @@ export default {
 }
 .field input::placeholder { color: #cbd5e1; }
 .field input:focus, .field input.focused {
-  border-color: #6366f1;
+  border-color: #0ea5e9;
   background: white;
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
 }
 
 .pw-wrap {
@@ -453,7 +451,7 @@ export default {
   transition: border-color 0.18s, box-shadow 0.18s;
   padding-right: 12px;
 }
-.pw-wrap.focused { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+.pw-wrap.focused { border-color: #0ea5e9; background: white; box-shadow: 0 0 0 3px rgba(14,165,233,0.1); }
 .pw-wrap input { flex: 1; border: none; background: transparent; padding: 11px 14px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; color: #0f172a; outline: none; }
 .pw-wrap input::placeholder { color: #cbd5e1; }
 .eye { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; }
@@ -461,7 +459,7 @@ export default {
 .btn {
   width: 100%;
   padding: 13px;
-  background: #6366f1;
+  background: #0ea5e9;
   border: none;
   border-radius: 10px;
   color: white;
@@ -470,16 +468,16 @@ export default {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
-  box-shadow: 0 2px 12px rgba(99,102,241,0.25);
+  box-shadow: 0 2px 12px rgba(14,165,233,0.25);
 }
-.btn:hover:not(:disabled) { background: #4f46e5; box-shadow: 0 4px 20px rgba(99,102,241,0.35); transform: translateY(-1px); }
+.btn:hover:not(:disabled) { background: #0284c7; box-shadow: 0 4px 20px rgba(14,165,233,0.35); transform: translateY(-1px); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .spin-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.footer { text-align: center; font-size: 10px; color: #cbd5e1; margin-top: 20px; letter-spacing: 0.3px; }
+.footer { text-align: center; font-size: 12px; color: #0ea5e9; margin-top: 20px; letter-spacing: 0.3px; font-weight: 700; }
 
 /* Scanner */
 .scanner-card {
@@ -519,7 +517,7 @@ export default {
 .corner {
   position: absolute;
   width: 24px; height: 24px;
-  border-color: #6366f1;
+  border-color: #0ea5e9;
   border-style: solid;
 }
 .tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
@@ -531,7 +529,7 @@ export default {
   position: absolute;
   left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #6366f1, transparent);
+  background: linear-gradient(90deg, transparent, #0ea5e9, transparent);
   animation: scanMove 2s ease-in-out infinite;
 }
 @keyframes scanMove {
