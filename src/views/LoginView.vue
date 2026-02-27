@@ -201,30 +201,40 @@ export default {
     },
 
     handleQRResult(data) {
-      this.closeScanner()
+      // Hentikan scanning dulu agar tidak terpicu berkali-kali
+      clearInterval(this.scanInterval)
+      this.scanInterval = null
+
       try {
         const url = new URL(data)
         const path = url.pathname
+
         if (path.includes('/verify/')) {
+          // QR valid dari sistem → tutup scanner & redirect
+          this.closeScanner()
           const hash = path.split('/verify/')[1]
           this.$router.push({ name: 'verify', params: { hash } })
         } else {
-          this.scanError = 'QR Code tidak valid untuk sertifikat ini.'
-          this.showScanner = true
-          this.openScanner()
+          // QR valid tapi bukan sertifikat sistem → tampilkan error, lanjut scan
+          this.scanError = 'QR Code ini bukan sertifikat terbitan VeriZh. Coba lagi.'
+          this.startScanning()
         }
       } catch (e) {
+        // QR bukan URL sama sekali → tampilkan error, lanjut scan
         this.scanError = 'QR Code tidak dikenali. Coba lagi.'
+        this.startScanning()
       }
     },
 
     closeScanner() {
       clearInterval(this.scanInterval)
+      this.scanInterval = null
       if (this.stream) {
         this.stream.getTracks().forEach(t => t.stop())
         this.stream = null
       }
       this.showScanner = false
+      this.scanError = null
     }
   },
 
@@ -261,19 +271,14 @@ export default {
 
 /* Hero */
 .hero {
-  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  animation: up 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-@keyframes up {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  text-align: center;
 }
 .hero-icon {
-  width: 72px; height: 72px;
+  width: 68px; height: 68px;
   background: white;
   border-radius: 20px;
   display: flex;
