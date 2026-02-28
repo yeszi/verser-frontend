@@ -155,7 +155,13 @@ export default {
         const res = await axios.get(`${API_URL}/verify/${hash}`)
         if (res.data.status === 'VALID') data.value = res.data.data
       } catch (e) {
-        console.error('Verify Error:', e)
+        if (e.response?.status === 404) {
+          console.error('Hash tidak ditemukan')
+        } else if (e.response?.status === 400) {
+          console.error('Data sertifikat telah dimanipulasi')
+        } else {
+          console.error('Verify Error:', e)
+        }
       } finally {
         loading.value = false
       }
