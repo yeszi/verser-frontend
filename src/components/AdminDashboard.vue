@@ -67,11 +67,11 @@
             <div class="form-grid">
               <div class="field full">
                 <label>Nama Acara / Event</label>
-                <input v-model="form.nama_event" type="text" placeholder="Contoh: Webinar Blockchain 2026" />
+                <input v-model="form.nama_event" type="text" placeholder="Contoh: Webinar 2026" />
               </div>
               <div class="field">
                 <label>Lokasi Kegiatan</label>
-                <input v-model="form.nama_lokasi" type="text" placeholder="Nama gedung atau tempat" />
+                <input v-model="form.nama_lokasi" type="text" placeholder="Nama Gedung/Tempat" />
               </div>
               <div class="field">
                 <label>
@@ -87,7 +87,7 @@
                     <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.4"/>
                     <path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
                   </svg>
-                  {{ gpsLoading ? 'Mengambil lokasi...' : 'Ambil Lokasi GPS' }}
+                  {{ gpsLoading ? 'Akses Lokasi' : 'Ambil Lokasi GPS' }}
                 </button>
               </div>
               <div class="field">
@@ -115,7 +115,7 @@
                 <path d="M10 3v14M3 10l7-7 7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span v-if="loading" class="spinner-sm"></span>
-              {{ loading ? 'Memproses Chain...' : 'Kunci Sertifikat ke Blockchain' }}
+              {{ loading ? 'Memproses Chain...' : 'Generate' }}
             </button>
           </div>
 
@@ -150,7 +150,7 @@
                 <p class="info-label">QR Code Verifikasi</p>
                 <img :src="qrCodeUrl" alt="QR Code" class="qr-img" />
                 <p class="qr-hint">Scan untuk verifikasi</p>
-                <a :href="qrCodeUrl" download="qrcode-sertifikat.png" class="qr-dl">⬇ Download QR</a>
+                <a :href="qrCodeUrl" download="qrcode-sertifikat.png" class="qr-dl">⬇ Perjelas QR</a>
               </div>
             </div>
           </div>
@@ -247,7 +247,21 @@
                       </td>
                       <td class="td-date">{{ formatDate(row.created_at) }}</td>
                       <td>
-                        <button @click="goToVerify(row.cert_hash)" class="lihat-btn">Lihat</button>
+                        <div class="aksi-wrap">
+                          <button @click="goToVerify(row.cert_hash)" class="lihat-btn">Lihat</button>
+                          <a :href="`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(row.verify_url)}`" :download="`QR-${row.nama_peserta}.png`" target="_blank" class="qr-btn" title="Download QR">
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                              <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                              <rect x="10" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                              <rect x="1" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                              <rect x="10" y="10" width="2" height="2" fill="currentColor"/>
+                              <rect x="13" y="10" width="2" height="2" fill="currentColor"/>
+                              <rect x="10" y="13" width="2" height="2" fill="currentColor"/>
+                              <rect x="13" y="13" width="2" height="2" fill="currentColor"/>
+                            </svg>
+                            QR
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -262,6 +276,18 @@
                       {{ isRowCorrupted(row.id) ? 'Manipulated' : 'Secure' }}
                     </div>
                     <button @click="goToVerify(row.cert_hash)" class="lihat-btn">Lihat</button>
+                    <a :href="`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(row.verify_url)}`" :download="`QR-${row.nama_peserta}.png`" target="_blank" class="qr-btn" title="Download QR">
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                        <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <rect x="10" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <rect x="1" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <rect x="10" y="10" width="2" height="2" fill="currentColor"/>
+                        <rect x="13" y="10" width="2" height="2" fill="currentColor"/>
+                        <rect x="10" y="13" width="2" height="2" fill="currentColor"/>
+                        <rect x="13" y="13" width="2" height="2" fill="currentColor"/>
+                      </svg>
+                      QR
+                    </a>
                   </div>
                   <p class="mc-name">{{ row.nama_peserta }}</p>
                   <p class="mc-event">{{ row.nama_event }}</p>
@@ -891,6 +917,9 @@ td { padding: 12px 12px; }
 .hash-chip.prev { color: #94a3b8; background: #f1f5f9; }
 .lihat-btn { padding: 6px 14px; background: #6366f1; color: white; border: none; border-radius: 7px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
 .lihat-btn:hover { background: #4f46e5; }
+.aksi-wrap { display: flex; align-items: center; gap: 6px; }
+.qr-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 7px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+.qr-btn:hover { background: #dcfce7; border-color: #86efac; }
 
 .mobile-cards { display: none; }
 .mobile-card { border: 1px solid #e8ecf4; border-radius: 12px; padding: 14px; margin-bottom: 10px; background: white; }
