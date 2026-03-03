@@ -184,12 +184,12 @@ export default {
     async checkSystemHealth() {
       try {
         await axios.get(`${API_BASE_URL}/audit-chain`)
-        this.healthStatus = { status: 'SECURE', message: 'Blockchain Aman & Utuh' }
+        this.healthStatus = { status: 'SECURE', message: "Data Secure" }
       } catch (err) {
         if (err.response && err.response.status === 400) {
-          this.healthStatus = { status: 'CORRUPTED', message: 'Terdeteksi Manipulasi Data!' }
+          this.healthStatus = { status: 'CORRUPTED', message: "Data Corrupted!!" }
         } else {
-          this.healthStatus = { status: 'ERROR', message: 'Gagal Terhubung ke Chain' }
+          this.healthStatus = { status: 'ERROR', message: 'Gagal Terhubung ke Server' }
         }
       }
     },
@@ -505,6 +505,11 @@ export default {
 .pw-wrap { display: flex; align-items: center; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding-right: 12px; }
 .pw-wrap input { flex: 1; border: none; background: transparent; padding: 11px 14px; outline: none; }
 .eye { background: none; border: none; cursor: pointer; }
+
+/* Sembunyikan icon mata bawaan browser */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none !important; }
+input::-webkit-credentials-auto-fill-button { display: none !important; }
 
 .btn { width: 100%; padding: 13px; background: #0ea5e9; border: none; border-radius: 10px; color: white; font-weight: 600; cursor: pointer; }
 .btn:hover:not(:disabled) { background: #0284c7; transform: translateY(-1px); }
