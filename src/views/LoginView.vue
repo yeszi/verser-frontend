@@ -13,7 +13,6 @@
       <p>Sistem Verifikasi Sertifikat Digital</p>
       <p class="hero-sub">Universitas Maritim Raja Ali Haji</p>
 
-      <!-- Tombol Scan QR -->
       <button class="scan-btn" @click="openScanner">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -26,7 +25,6 @@
       <p class="hint-text">Scan QR Code pada sertifikat untuk verifikasi keasliannya</p>
     </div>
 
-
     <button class="lock-fab" @click="showLogin = true" title="Admin Login">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
@@ -34,7 +32,8 @@
       </svg>
     </button>
 
-    <div v-if="showLogin" class="modal-overlay" @click.self="showLogin = false">
+    <!-- Modal Login -->
+    <div v-if="showLogin" class="modal-overlay" @click.self="handleModalClose">
       <div class="modal-card">
         <div class="modal-header">
           <div class="modal-icon">
@@ -47,25 +46,52 @@
             <p class="modal-title">Form Login</p>
             <p class="modal-sub">Hanya Untuk Pemegang Hak Akses</p>
           </div>
-          <button class="modal-close" @click="showLogin = false">
+          <button class="modal-close" @click="handleModalClose">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 3l10 10M13 3L3 13" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
           </button>
         </div>
 
-        <div v-if="error" class="error-box">{{ error }}</div>
+        <!-- Error box: hanya tampilkan pesan dari server, tidak expose detail teknis -->
+        <div v-if="error" class="error-box" role="alert">{{ error }}</div>
 
-        <form @submit.prevent="handleLogin" class="form">
+        <!-- Cooldown notice: muncul saat terlalu banyak percobaan gagal -->
+        <div v-if="cooldownSeconds > 0" class="cooldown-box" role="status">
+          Terlalu banyak percobaan. Coba lagi dalam {{ cooldownSeconds }} detik.
+        </div>
+
+        <form @submit.prevent="handleLogin" class="form" novalidate>
           <div class="field">
-            <label>Username</label>
-            <input v-model="username" type="text" placeholder="Masukkan username" required :class="{ focused: focused === 'u' }" @focus="focused = 'u'" @blur="focused = null"/>
+            <label for="login-username">Username</label>
+            <input
+              id="login-username"
+              v-model="username"
+              type="text"
+              placeholder="Masukkan username"
+              autocomplete="username"
+              :disabled="loading || cooldownSeconds > 0"
+              :class="{ focused: focused === 'u' }"
+              @focus="focused = 'u'"
+              @blur="focused = null"
+              maxlength="64"
+            />
           </div>
           <div class="field">
-            <label>Password</label>
+            <label for="login-password">Password</label>
             <div class="pw-wrap" :class="{ focused: focused === 'p' }">
-              <input v-model="password" :type="showPw ? 'text' : 'password'" placeholder="Masukkan password" required @focus="focused = 'p'" @blur="focused = null"/>
-              <button type="button" class="eye" @click="showPw = !showPw" tabindex="-1">
+              <input
+                id="login-password"
+                v-model="password"
+                :type="showPw ? 'text' : 'password'"
+                placeholder="Masukkan password"
+                autocomplete="current-password"
+                :disabled="loading || cooldownSeconds > 0"
+                @focus="focused = 'p'"
+                @blur="focused = null"
+                maxlength="128"
+              />
+              <button type="button" class="eye" @click="showPw = !showPw" tabindex="-1" :aria-label="showPw ? 'Sembunyikan password' : 'Tampilkan password'">
                 <svg v-if="!showPw" width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="#94a3b8" stroke-width="1.3"/>
                   <circle cx="8" cy="8" r="2" stroke="#94a3b8" stroke-width="1.3"/>
@@ -76,7 +102,11 @@
               </button>
             </div>
           </div>
-          <button type="submit" class="btn" :disabled="loading">
+          <button
+            type="submit"
+            class="btn"
+            :disabled="loading || cooldownSeconds > 0 || !username.trim() || !password"
+          >
             <span v-if="!loading">Masuk</span>
             <span v-else class="spin-row"><span class="spinner"></span> Memverifikasi...</span>
           </button>
@@ -86,7 +116,7 @@
       </div>
     </div>
 
-    <!-- Pop Up Scanner QR -->
+    <!-- Modal Scanner QR -->
     <div v-if="showScanner" class="modal-overlay" @click.self="closeScanner">
       <div class="scanner-card">
         <div class="scanner-header">
@@ -122,6 +152,10 @@
 import axios from 'axios'
 import API_BASE_URL from '../config/api'
 
+const MAX_ATTEMPTS = 5
+
+const COOLDOWN_DURATION = 240
+
 export default {
   name: 'LoginView',
   data() {
@@ -139,30 +173,109 @@ export default {
       scanInterval: null,
       canvas: null,
       ctx: null,
+
+      // Proteksi brute force sisi client
+      failedAttempts: 0,
+      cooldownSeconds: 0,
+      cooldownTimer: null,
     }
   },
   methods: {
+
+
     async handleLogin() {
+      // Jangan proses kalau sedang cooldown
+      if (this.cooldownSeconds > 0) return
+
+      // Validasi input sisi client sebelum kirim ke server
+      if (!this.username.trim() || !this.password) {
+        this.error = 'Username dan password wajib diisi'
+        return
+      }
+
       try {
         this.error = null
         this.loading = true
-        const response = await axios.post(`${API_BASE_URL}/login`, {
-          username: this.username,
-          password: this.password
-        })
+
+        const response = await axios.post(
+          `${API_BASE_URL}/login`,
+          {
+            username: this.username.trim(),
+            password: this.password
+          },
+          {
+            // Timeout 10 detik — cegah request menggantung
+            timeout: 10000,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        )
+
         if (response.data.success) {
+          // Reset counter gagal saat berhasil
+          this.failedAttempts = 0
+
+          // Simpan token ke localStorage
           localStorage.setItem('token', response.data.token)
+
+          // Bersihkan form sebelum pindah halaman
+          this.clearForm()
           this.showLogin = false
           this.$router.push('/admin')
         } else {
-          throw new Error(response.data.message || 'Login gagal')
+          this.handleLoginFailure(response.data.message || 'Login gagal')
         }
+
       } catch (err) {
-        this.error = err.response?.data?.message || err.message
+        if (err.code === 'ECONNABORTED') {
+          this.handleLoginFailure('Koneksi timeout, coba lagi')
+        } else {
+          // Ambil pesan error dari response server — tidak expose stack trace
+          const msg = err.response?.data?.message || 'Terjadi kesalahan, coba lagi'
+          this.handleLoginFailure(msg)
+        }
       } finally {
         this.loading = false
       }
     },
+
+    handleLoginFailure(message) {
+      this.failedAttempts++
+      this.error = message
+
+      // Kalau sudah melebihi batas, aktifkan cooldown
+      if (this.failedAttempts >= MAX_ATTEMPTS) {
+        this.startCooldown()
+      }
+    },
+
+    startCooldown() {
+      this.cooldownSeconds = COOLDOWN_DURATION
+      this.error = null
+      clearInterval(this.cooldownTimer)
+      this.cooldownTimer = setInterval(() => {
+        this.cooldownSeconds--
+        if (this.cooldownSeconds <= 0) {
+          clearInterval(this.cooldownTimer)
+          this.cooldownTimer = null
+          this.failedAttempts = 0
+        }
+      }, 1000)
+    },
+
+    handleModalClose() {
+      // Hanya tutup modal kalau tidak sedang loading
+      if (this.loading) return
+      this.showLogin = false
+      this.clearForm()
+    },
+
+    clearForm() {
+      this.username = ''
+      this.password = ''
+      this.error = null
+      this.showPw = false
+    },
+
 
     async openScanner() {
       this.showScanner = true
@@ -201,7 +314,6 @@ export default {
     },
 
     handleQRResult(data) {
-      // Hentikan scanning dulu agar tidak terpicu berkali-kali
       clearInterval(this.scanInterval)
       this.scanInterval = null
 
@@ -209,18 +321,28 @@ export default {
         const url = new URL(data)
         const path = url.pathname
 
+        const allowedOrigin = new URL(API_BASE_URL).origin
+        if (url.origin !== window.location.origin && url.origin !== allowedOrigin) {
+          this.scanError = 'QR Code ini bukan dari sistem VeriZh. Coba lagi.'
+          this.startScanning()
+          return
+        }
+
         if (path.includes('/verify/')) {
-          // QR valid dari sistem → tutup scanner & redirect
-          this.closeScanner()
+
           const hash = path.split('/verify/')[1]
+          if (!hash || !/^[0-9a-fA-F]{64}$/.test(hash)) {
+            this.scanError = 'Format QR Code tidak valid. Coba lagi.'
+            this.startScanning()
+            return
+          }
+          this.closeScanner()
           this.$router.push({ name: 'verify', params: { hash } })
         } else {
-          // QR valid tapi bukan sertifikat sistem → tampilkan error, lanjut scan
           this.scanError = 'QR Code ini bukan sertifikat terbitan VeriZh. Coba lagi.'
           this.startScanning()
         }
       } catch (e) {
-        // QR bukan URL sama sekali → tampilkan error, lanjut scan
         this.scanError = 'QR Code tidak dikenali. Coba lagi.'
         this.startScanning()
       }
@@ -239,16 +361,18 @@ export default {
   },
 
   mounted() {
-    // Load jsQR library
     if (!window.jsQR) {
       const script = document.createElement('script')
       script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
+      script.integrity = 'sha256-ede8beY9+A0EFkNqCdg2PVNXI8mHXBu2UEYiE+pYqLo='
+      script.crossOrigin = 'anonymous'
       document.head.appendChild(script)
     }
   },
 
   beforeUnmount() {
     this.closeScanner()
+    clearInterval(this.cooldownTimer)
   }
 }
 </script>
@@ -419,6 +543,18 @@ export default {
   text-align: center;
 }
 
+.cooldown-box {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #d97706;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 600;
+}
+
 .form { display: flex; flex-direction: column; gap: 14px; }
 
 .field label {
@@ -446,6 +582,10 @@ export default {
   background: white;
   box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
 }
+.field input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .pw-wrap {
   display: flex;
@@ -459,6 +599,7 @@ export default {
 .pw-wrap.focused { border-color: #0ea5e9; background: white; box-shadow: 0 0 0 3px rgba(14,165,233,0.1); }
 .pw-wrap input { flex: 1; border: none; background: transparent; padding: 11px 14px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; color: #0f172a; outline: none; }
 .pw-wrap input::placeholder { color: #cbd5e1; }
+.pw-wrap input:disabled { opacity: 0.5; cursor: not-allowed; }
 .eye { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; }
 
 .btn {
@@ -481,6 +622,7 @@ export default {
 .spin-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
 .footer { text-align: center; font-size: 12px; color: #0ea5e9; margin-top: 20px; letter-spacing: 0.3px; font-weight: 700; }
 
