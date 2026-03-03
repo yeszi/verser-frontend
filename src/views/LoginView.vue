@@ -336,7 +336,6 @@ export default {
     if (!window.jsQR) {
       const script = document.createElement('script')
       script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
-      script.integrity = 'sha256-ede8beY9+A0EFkNqCdg2PVNXI8mHXBu2UEYiE+pYqLo='
       script.crossOrigin = 'anonymous'
       document.head.appendChild(script)
     }
