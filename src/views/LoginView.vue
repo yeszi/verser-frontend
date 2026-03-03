@@ -1,6 +1,5 @@
 <template>
   <div class="root">
-
     <div class="hero">
       <div class="hero-icon">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
@@ -23,6 +22,11 @@
       </button>
 
       <p class="hint-text">Scan QR Code pada sertifikat untuk verifikasi keasliannya</p>
+
+      <div v-if="healthStatus.status" class="chain-status" :class="healthStatus.status.toLowerCase()">
+        <div class="status-dot"></div>
+        <span>Sistem: {{ healthStatus.message }}</span>
+      </div>
     </div>
 
     <button class="lock-fab" @click="showLogin = true" title="Admin Login">
@@ -32,7 +36,6 @@
       </svg>
     </button>
 
-    <!-- Modal Login -->
     <div v-if="showLogin" class="modal-overlay" @click.self="handleModalClose">
       <div class="modal-card">
         <div class="modal-header">
@@ -53,10 +56,8 @@
           </button>
         </div>
 
-        <!-- Error box: hanya tampilkan pesan dari server, tidak expose detail teknis -->
         <div v-if="error" class="error-box" role="alert">{{ error }}</div>
 
-        <!-- Cooldown notice: muncul saat terlalu banyak percobaan gagal -->
         <div v-if="cooldownSeconds > 0" class="cooldown-box" role="status">
           Terlalu banyak percobaan. Coba lagi dalam {{ cooldownSeconds }} detik.
         </div>
@@ -116,7 +117,6 @@
       </div>
     </div>
 
-    <!-- Modal Scanner QR -->
     <div v-if="showScanner" class="modal-overlay" @click.self="closeScanner">
       <div class="scanner-card">
         <div class="scanner-header">
@@ -144,7 +144,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -153,7 +152,6 @@ import axios from 'axios'
 import API_BASE_URL from '../config/api'
 
 const MAX_ATTEMPTS = 5
-
 const COOLDOWN_DURATION = 240
 
 export default {
@@ -173,21 +171,31 @@ export default {
       scanInterval: null,
       canvas: null,
       ctx: null,
-
-      // Proteksi brute force sisi client
       failedAttempts: 0,
       cooldownSeconds: 0,
       cooldownTimer: null,
+      healthStatus: {
+        status: '',
+        message: 'Mengecek Integritas...'
+      }
     }
   },
   methods: {
-
+    async checkSystemHealth() {
+      try {
+        await axios.get(`${API_BASE_URL}/audit-chain`)
+        this.healthStatus = { status: 'SECURE', message: 'Blockchain Aman & Utuh' }
+      } catch (err) {
+        if (err.response && err.response.status === 400) {
+          this.healthStatus = { status: 'CORRUPTED', message: 'Terdeteksi Manipulasi Data!' }
+        } else {
+          this.healthStatus = { status: 'ERROR', message: 'Gagal Terhubung ke Chain' }
+        }
+      }
+    },
 
     async handleLogin() {
-      // Jangan proses kalau sedang cooldown
       if (this.cooldownSeconds > 0) return
-
-      // Validasi input sisi client sebelum kirim ke server
       if (!this.username.trim() || !this.password) {
         this.error = 'Username dan password wajib diisi'
         return
@@ -196,43 +204,24 @@ export default {
       try {
         this.error = null
         this.loading = true
-
         const response = await axios.post(
           `${API_BASE_URL}/login`,
-          {
-            username: this.username.trim(),
-            password: this.password
-          },
-          {
-            // Timeout 10 detik — cegah request menggantung
-            timeout: 10000,
-            headers: { 'Content-Type': 'application/json' }
-          }
+          { username: this.username.trim(), password: this.password },
+          { timeout: 10000, headers: { 'Content-Type': 'application/json' } }
         )
 
         if (response.data.success) {
-          // Reset counter gagal saat berhasil
           this.failedAttempts = 0
-
-          // Simpan token ke localStorage
           localStorage.setItem('token', response.data.token)
-
-          // Bersihkan form sebelum pindah halaman
           this.clearForm()
           this.showLogin = false
           this.$router.push('/admin')
         } else {
           this.handleLoginFailure(response.data.message || 'Login gagal')
         }
-
       } catch (err) {
-        if (err.code === 'ECONNABORTED') {
-          this.handleLoginFailure('Koneksi timeout, coba lagi')
-        } else {
-          // Ambil pesan error dari response server — tidak expose stack trace
-          const msg = err.response?.data?.message || 'Terjadi kesalahan, coba lagi'
-          this.handleLoginFailure(msg)
-        }
+        const msg = err.response?.data?.message || 'Terjadi kesalahan, coba lagi'
+        this.handleLoginFailure(msg)
       } finally {
         this.loading = false
       }
@@ -241,8 +230,6 @@ export default {
     handleLoginFailure(message) {
       this.failedAttempts++
       this.error = message
-
-      // Kalau sudah melebihi batas, aktifkan cooldown
       if (this.failedAttempts >= MAX_ATTEMPTS) {
         this.startCooldown()
       }
@@ -263,7 +250,6 @@ export default {
     },
 
     handleModalClose() {
-      // Hanya tutup modal kalau tidak sedang loading
       if (this.loading) return
       this.showLogin = false
       this.clearForm()
@@ -276,21 +262,18 @@ export default {
       this.showPw = false
     },
 
-
     async openScanner() {
       this.showScanner = true
       this.scanError = null
       await this.$nextTick()
       try {
-        this.stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        })
+        this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
         this.$refs.videoEl.srcObject = this.stream
         this.canvas = document.createElement('canvas')
         this.ctx = this.canvas.getContext('2d')
         this.startScanning()
       } catch (e) {
-        this.scanError = 'Kamera tidak dapat diakses. Pastikan izin kamera sudah diberikan.'
+        this.scanError = 'Kamera tidak dapat diakses.'
       }
     },
 
@@ -305,9 +288,7 @@ export default {
           const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height)
           if (window.jsQR) {
             const code = window.jsQR(imageData.data, imageData.width, imageData.height)
-            if (code && code.data) {
-              this.handleQRResult(code.data)
-            }
+            if (code && code.data) this.handleQRResult(code.data)
           }
         } catch (e) {}
       }, 300)
@@ -316,34 +297,25 @@ export default {
     handleQRResult(data) {
       clearInterval(this.scanInterval)
       this.scanInterval = null
-
       try {
         const url = new URL(data)
         const path = url.pathname
-
         const allowedOrigin = new URL(API_BASE_URL).origin
         if (url.origin !== window.location.origin && url.origin !== allowedOrigin) {
-          this.scanError = 'QR Code ini bukan dari sistem VeriZh. Coba lagi.'
+          this.scanError = 'QR Code tidak valid.'
           this.startScanning()
           return
         }
-
         if (path.includes('/verify/')) {
-
           const hash = path.split('/verify/')[1]
-          if (!hash || !/^[0-9a-fA-F]{64}$/.test(hash)) {
-            this.scanError = 'Format QR Code tidak valid. Coba lagi.'
-            this.startScanning()
-            return
-          }
           this.closeScanner()
           this.$router.push({ name: 'verify', params: { hash } })
         } else {
-          this.scanError = 'QR Code ini bukan sertifikat terbitan VeriZh. Coba lagi.'
+          this.scanError = 'Bukan sertifikat terbitan VeriZh.'
           this.startScanning()
         }
       } catch (e) {
-        this.scanError = 'QR Code tidak dikenali. Coba lagi.'
+        this.scanError = 'QR Code tidak dikenali.'
         this.startScanning()
       }
     },
@@ -359,8 +331,8 @@ export default {
       this.scanError = null
     }
   },
-
   mounted() {
+    this.checkSystemHealth()
     if (!window.jsQR) {
       const script = document.createElement('script')
       script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
@@ -369,7 +341,6 @@ export default {
       document.head.appendChild(script)
     }
   },
-
   beforeUnmount() {
     this.closeScanner()
     clearInterval(this.cooldownTimer)
@@ -393,7 +364,6 @@ export default {
   position: relative;
 }
 
-/* Hero */
 .hero {
   display: flex;
   flex-direction: column;
@@ -459,7 +429,29 @@ export default {
   line-height: 1.5;
 }
 
-/* Tombol Gembok */
+.chain-status {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.chain-status.secure { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.chain-status.secure .status-dot { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+.chain-status.corrupted { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; animation: pulse-red 2s infinite; }
+.chain-status.corrupted .status-dot { background: #ef4444; }
+.chain-status.error { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+@keyframes pulse-red {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 0 12px rgba(239, 68, 68, 0.2); }
+  100% { transform: scale(1); }
+}
+
 .lock-fab {
   position: fixed;
   bottom: 24px;
@@ -476,13 +468,8 @@ export default {
   transition: all 0.18s;
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
-.lock-fab:hover {
-  border-color: #0ea5e9;
-  color: #0ea5e9;
-  box-shadow: 0 4px 16px rgba(14,165,233,0.2);
-}
+.lock-fab:hover { border-color: #0ea5e9; color: #0ea5e9; }
 
-/* Modal Overlay */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -495,7 +482,6 @@ export default {
   backdrop-filter: blur(4px);
 }
 
-/* Modal Login */
 .modal-card {
   background: white;
   border-radius: 20px;
@@ -505,186 +491,44 @@ export default {
   box-shadow: 0 20px 60px rgba(0,0,0,0.15);
   animation: up 0.3s ease both;
 }
-.modal-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.modal-icon {
-  width: 38px; height: 38px;
-  background: #e0f2fe;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+.modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.modal-icon { width: 38px; height: 38px; background: #e0f2fe; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
 .modal-title { font-size: 14px; font-weight: 700; color: #0f172a; }
 .modal-sub { font-size: 11px; color: #94a3b8; }
-.modal-close {
-  margin-left: auto;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-}
+.modal-close { margin-left: auto; background: none; border: none; cursor: pointer; }
 
-.error-box {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #ef4444;
-  font-size: 13px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-  text-align: center;
-}
-
-.cooldown-box {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #d97706;
-  font-size: 13px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-  text-align: center;
-  font-weight: 600;
-}
+.error-box { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; font-size: 13px; padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; text-align: center; }
+.cooldown-box { background: #fffbeb; border: 1px solid #fde68a; color: #d97706; font-size: 13px; padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; text-align: center; font-weight: 600; }
 
 .form { display: flex; flex-direction: column; gap: 14px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+.field input { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: #f8fafc; outline: none; }
+.pw-wrap { display: flex; align-items: center; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding-right: 12px; }
+.pw-wrap input { flex: 1; border: none; background: transparent; padding: 11px 14px; outline: none; }
+.eye { background: none; border: none; cursor: pointer; }
 
-.field label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 6px;
-}
-.field input {
-  width: 100%;
-  padding: 11px 14px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px;
-  color: #0f172a;
-  background: #f8fafc;
-  outline: none;
-  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
-}
-.field input::placeholder { color: #cbd5e1; }
-.field input:focus, .field input.focused {
-  border-color: #0ea5e9;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
-}
-.field input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pw-wrap {
-  display: flex;
-  align-items: center;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  background: #f8fafc;
-  transition: border-color 0.18s, box-shadow 0.18s;
-  padding-right: 12px;
-}
-.pw-wrap.focused { border-color: #0ea5e9; background: white; box-shadow: 0 0 0 3px rgba(14,165,233,0.1); }
-.pw-wrap input { flex: 1; border: none; background: transparent; padding: 11px 14px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; color: #0f172a; outline: none; }
-.pw-wrap input::placeholder { color: #cbd5e1; }
-.pw-wrap input:disabled { opacity: 0.5; cursor: not-allowed; }
-.eye { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; }
-
-.btn {
-  width: 100%;
-  padding: 13px;
-  background: #0ea5e9;
-  border: none;
-  border-radius: 10px;
-  color: white;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
-  box-shadow: 0 2px 12px rgba(14,165,233,0.25);
-}
-.btn:hover:not(:disabled) { background: #0284c7; box-shadow: 0 4px 20px rgba(14,165,233,0.35); transform: translateY(-1px); }
+.btn { width: 100%; padding: 13px; background: #0ea5e9; border: none; border-radius: 10px; color: white; font-weight: 600; cursor: pointer; }
+.btn:hover:not(:disabled) { background: #0284c7; transform: translateY(-1px); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.spin-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
-.footer { text-align: center; font-size: 12px; color: #0ea5e9; margin-top: 20px; letter-spacing: 0.3px; font-weight: 700; }
+.footer { text-align: center; font-size: 12px; color: #0ea5e9; margin-top: 20px; font-weight: 700; }
 
-/* Scanner */
-.scanner-card {
-  background: white;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 380px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-  animation: up 0.3s ease both;
-}
-.scanner-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px;
-  border-bottom: 1px solid #f1f5f9;
-}
-.scanner-title { font-size: 15px; font-weight: 700; color: #0f172a; }
+.scanner-card { background: white; border-radius: 20px; width: 100%; max-width: 380px; overflow: hidden; animation: up 0.3s ease both; }
+.scanner-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #f1f5f9; }
 .scanner-body { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-
-.video-wrap {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #0f172a;
-}
+.video-wrap { position: relative; width: 100%; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #0f172a; }
 .video { width: 100%; height: 100%; object-fit: cover; }
-
-.scan-frame {
-  position: absolute;
-  inset: 20px;
-  pointer-events: none;
-}
-.corner {
-  position: absolute;
-  width: 24px; height: 24px;
-  border-color: #0ea5e9;
-  border-style: solid;
-}
+.scan-frame { position: absolute; inset: 20px; pointer-events: none; }
+.corner { position: absolute; width: 24px; height: 24px; border-color: #0ea5e9; border-style: solid; }
 .tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
 .tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
 .bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
 .br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
-
-.scan-line {
-  position: absolute;
-  left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #0ea5e9, transparent);
-  animation: scanMove 2s ease-in-out infinite;
-}
-@keyframes scanMove {
-  0% { top: 0; }
-  50% { top: calc(100% - 2px); }
-  100% { top: 0; }
-}
-
-.scanner-hint { font-size: 13px; color: #64748b; text-align: center; }
-.scan-error { font-size: 12px; color: #ef4444; text-align: center; background: #fef2f2; padding: 8px 14px; border-radius: 8px; }
+.scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #0ea5e9, transparent); animation: scanMove 2s ease-in-out infinite; }
+@keyframes scanMove { 0% { top: 0; } 50% { top: calc(100% - 2px); } 100% { top: 0; } }
+.scan-error { font-size: 12px; color: #ef4444; background: #fef2f2; padding: 8px 14px; border-radius: 8px; }
 </style>

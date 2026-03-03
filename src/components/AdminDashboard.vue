@@ -62,7 +62,6 @@
       </header>
 
       <div class="content">
-
         <div v-if="activeTab === 'issue'" class="tab-panel">
           <div class="form-card">
             <div class="form-grid">
@@ -158,11 +157,21 @@
         </div>
 
         <div v-if="activeTab === 'data'" class="tab-panel">
+          <div class="audit-summary" v-if="auditResult">
+            <div class="audit-badge" :class="auditResult.status.toLowerCase()">
+              <div class="status-dot"></div>
+              <span>Status Blockchain: {{ auditResult.message }}</span>
+            </div>
+            <p v-if="auditResult.errors.length" class="audit-errors">
+              Terdeteksi manipulasi pada {{ auditResult.errors.length }} baris data.
+            </p>
+          </div>
+
           <div class="data-card">
             <div class="data-header">
               <div>
-                <p class="data-title">Data Sertifikat</p>
-                <p class="data-count">Total <strong>{{ tableData.length }}</strong> sertifikat tersimpan</p>
+                <p class="data-title">Data Sertifikat Terenkripsi</p>
+                <p class="data-count">Total <strong>{{ tableData.length }}</strong> blok tersimpan dalam rantai</p>
               </div>
               <div class="data-actions">
                 <div class="search-wrap">
@@ -172,6 +181,12 @@
                   </svg>
                   <input v-model="search" type="text" placeholder="Cari nama / event..." />
                 </div>
+                <button @click="runAudit" :disabled="auditLoading" class="audit-btn">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                  </svg>
+                  {{ auditLoading ? 'Audit...' : 'Audit Rantai' }}
+                </button>
                 <button @click="fetchData" class="refresh-btn">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                     <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -203,30 +218,34 @@
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Status</th>
                       <th>Nama Peserta</th>
-                      <th>Nama Event</th>
-                      <th>Lokasi</th>
-                      <th>Waktu Mulai</th>
-                      <th>Waktu Selesai</th>
-                      <th>Keterangan</th>
-                      <th>Hash</th>
+                      <th>Prev Hash</th>
+                      <th>Current Hash</th>
+                      <th>Waktu Terbit</th>
                       <th>Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="row in filteredData" :key="row.id">
+                    <tr v-for="row in filteredData" :key="row.id" :class="{ 'row-corrupted': isRowCorrupted(row.id) }">
                       <td class="td-id">{{ row.id }}</td>
-                      <td class="td-name">{{ row.nama_peserta }}</td>
-                      <td class="td-event">{{ row.nama_event }}</td>
-                      <td class="td-grey">{{ row.nama_lokasi }}</td>
-                      <td class="td-date">{{ formatDate(row.waktu_mulai) }}</td>
-                      <td class="td-date">{{ formatDate(row.waktu_selesai) }}</td>
-                      <td class="td-ket" :title="row.keterangan">{{ row.keterangan || '-' }}</td>
                       <td>
-                        <span class="hash-chip" :title="row.cert_hash">
-                          {{ row.cert_hash ? row.cert_hash.substring(0, 10) + '...' : '-' }}
+                        <div class="integrity-badge" :class="isRowCorrupted(row.id) ? 'corrupted' : 'secure'">
+                          {{ isRowCorrupted(row.id) ? 'Manipulated' : 'Secure' }}
+                        </div>
+                      </td>
+                      <td class="td-name">{{ row.nama_peserta }}</td>
+                      <td>
+                        <span class="hash-chip prev" :title="row.previous_hash">
+                          {{ row.previous_hash === '0' ? 'GENESIS' : row.previous_hash.substring(0, 8) }}
                         </span>
                       </td>
+                      <td>
+                        <span class="hash-chip" :title="row.cert_hash">
+                          {{ row.cert_hash ? row.cert_hash.substring(0, 8) : '-' }}
+                        </span>
+                      </td>
+                      <td class="td-date">{{ formatDate(row.created_at) }}</td>
                       <td>
                         <button @click="goToVerify(row.cert_hash)" class="lihat-btn">Lihat</button>
                       </td>
@@ -236,24 +255,23 @@
               </div>
 
               <div class="mobile-cards">
-                <div v-for="row in filteredData" :key="'m' + row.id" class="mobile-card">
+                <div v-for="row in filteredData" :key="'m' + row.id" class="mobile-card" :class="{ 'row-corrupted': isRowCorrupted(row.id) }">
                   <div class="mc-top">
                     <span class="mc-id">#{{ row.id }}</span>
+                    <div class="integrity-badge" :class="isRowCorrupted(row.id) ? 'corrupted' : 'secure'">
+                      {{ isRowCorrupted(row.id) ? 'Manipulated' : 'Secure' }}
+                    </div>
                     <button @click="goToVerify(row.cert_hash)" class="lihat-btn">Lihat</button>
                   </div>
                   <p class="mc-name">{{ row.nama_peserta }}</p>
                   <p class="mc-event">{{ row.nama_event }}</p>
-                  <div class="mc-meta">
-                    <span>📍 {{ row.nama_lokasi }}</span>
-                    <span>🗓 {{ formatDate(row.waktu_mulai) }}</span>
-                  </div>
-                  <div class="mc-hash">{{ row.cert_hash ? row.cert_hash.substring(0, 16) + '...' : '-' }}</div>
+                  <div class="mc-hash">Prev: {{ row.previous_hash.substring(0, 10) }}...</div>
+                  <div class="mc-hash">Curr: {{ row.cert_hash.substring(0, 10) }}...</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
       </div>
     </main>
   </div>
@@ -285,7 +303,9 @@ export default {
       tableData: [],
       tableLoading: false,
       tableError: null,
-      search: ''
+      search: '',
+      auditLoading: false,
+      auditResult: null
     }
   },
 
@@ -312,7 +332,10 @@ export default {
     setTab(tab) {
       this.activeTab = tab
       this.sidebarOpen = false
-      if (tab === 'data') this.fetchData()
+      if (tab === 'data') {
+        this.fetchData()
+        this.runAudit()
+      }
     },
 
     goToVerify(hash) {
@@ -332,6 +355,39 @@ export default {
       } finally {
         this.tableLoading = false
       }
+    },
+
+    async runAudit() {
+      this.auditLoading = true
+      try {
+        const res = await axios.get(this.API_URL + '/audit-chain')
+        this.auditResult = {
+          status: 'SECURE',
+          message: 'Seluruh Rantai Blockchain Utuh',
+          errors: []
+        }
+      } catch (err) {
+        if (err.response && err.response.status === 400) {
+          this.auditResult = {
+            status: 'CORRUPTED',
+            message: 'Integritas Blockchain Terganggu!',
+            errors: err.response.data.errors || []
+          }
+        } else {
+          this.auditResult = {
+            status: 'ERROR',
+            message: 'Gagal melakukan audit otomatis',
+            errors: []
+          }
+        }
+      } finally {
+        this.auditLoading = false
+      }
+    },
+
+    isRowCorrupted(id) {
+      if (!this.auditResult || !this.auditResult.errors) return false
+      return this.auditResult.errors.some(err => err.includes(`Blok ${id}`));
     },
 
     formatDate(val) {
@@ -380,6 +436,7 @@ export default {
         this.qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(this.verifyUrl)}`
         this.form = { nama_event: '', nama_lokasi: '', latitude: '', longitude: '', waktu_mulai: '', waktu_selesai: '', nama_peserta: '', keterangan: '' }
         this.gpsStatus = ''
+        await this.fetchData()
       } catch (err) {
         this.errorMsg = (err.response && err.response.data && err.response.data.message) || err.message || 'Terjadi kesalahan.'
       } finally {
@@ -525,6 +582,41 @@ export default {
 
 .content { flex: 1; padding: 24px; overflow-y: auto; }
 .tab-panel { max-width: 900px; }
+
+.audit-summary {
+  margin-bottom: 20px;
+  animation: slideDown 0.3s ease;
+}
+.audit-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.audit-badge.secure { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.audit-badge.corrupted { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; animation: pulseRed 2s infinite; }
+.audit-errors { font-size: 12px; color: #ef4444; margin-top: 6px; margin-left: 12px; font-weight: 600; }
+
+@keyframes pulseRed { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+.integrity-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+.integrity-badge.secure { background: #dcfce7; color: #15803d; }
+.integrity-badge.corrupted { background: #fee2e2; color: #b91c1c; }
+
+.row-corrupted { background: #fff5f5 !important; }
 
 .form-card {
   background: white;
@@ -740,6 +832,24 @@ export default {
 }
 .search-wrap input::placeholder { color: #cbd5e1; }
 
+.audit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: #6366f1;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.audit-btn:hover:not(:disabled) { background: #4f46e5; }
+.audit-btn:disabled { opacity: 0.6; }
+
 .refresh-btn {
   display: flex;
   align-items: center;
@@ -778,17 +888,18 @@ td { padding: 12px 12px; }
 .td-date { color: #64748b; font-size: 12px; white-space: nowrap; }
 .td-ket { color: #64748b; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hash-chip { font-family: 'Courier New', monospace; font-size: 10px; color: #6366f1; background: #eef2ff; padding: 3px 8px; border-radius: 6px; display: inline-block; }
+.hash-chip.prev { color: #94a3b8; background: #f1f5f9; }
 .lihat-btn { padding: 6px 14px; background: #6366f1; color: white; border: none; border-radius: 7px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
 .lihat-btn:hover { background: #4f46e5; }
 
 .mobile-cards { display: none; }
-.mobile-card { border: 1px solid #e8ecf4; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
-.mc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.mobile-card { border: 1px solid #e8ecf4; border-radius: 12px; padding: 14px; margin-bottom: 10px; background: white; }
+.mc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px; }
 .mc-id { font-size: 10px; font-weight: 700; color: #cbd5e1; }
 .mc-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 2px; }
 .mc-event { font-size: 12px; color: #64748b; margin-bottom: 8px; }
 .mc-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #94a3b8; margin-bottom: 8px; }
-.mc-hash { font-family: 'Courier New', monospace; font-size: 10px; color: #6366f1; background: #eef2ff; padding: 4px 8px; border-radius: 6px; word-break: break-all; }
+.mc-hash { font-family: 'Courier New', monospace; font-size: 9px; color: #6366f1; background: #eef2ff; padding: 4px 8px; border-radius: 6px; word-break: break-all; margin-top: 4px; }
 
 @media (max-width: 768px) {
   .sidebar { position: fixed; top: 0; left: 0; height: 100%; transform: translateX(-100%); transition: transform 0.25s ease; z-index: 200; }
@@ -799,14 +910,12 @@ td { padding: 12px 12px; }
   .content { padding: 12px; }
   .tab-panel { max-width: 100%; }
 
-  /* Form responsive */
   .form-card { padding: 18px; }
   .form-grid { grid-template-columns: 1fr; gap: 14px; }
   .field.full { grid-column: 1; }
   .gps-inputs { flex-direction: column; gap: 8px; }
   .gps-inputs input { width: 100%; }
 
-  /* Result card responsive */
   .result-body { flex-direction: column; }
   .result-card { margin-top: 16px; }
   .result-header { padding: 14px 16px; }
@@ -817,13 +926,12 @@ td { padding: 12px 12px; }
   .info-url { font-size: 9px; word-break: break-all; }
   .verify-btn { width: 100%; text-align: center; }
 
-  /* Data tab responsive */
   .data-card { padding: 16px; }
   .data-header { flex-direction: column; align-items: flex-start; gap: 12px; }
   .data-actions { width: 100%; flex-direction: column; align-items: stretch; }
   .search-wrap { width: 100%; }
   .search-wrap input { width: 100%; flex: 1; }
-  .refresh-btn { width: 100%; justify-content: center; }
+  .refresh-btn, .audit-btn { width: 100%; justify-content: center; }
   .table-wrap { display: none; }
   .mobile-cards { display: block; }
   .topbar { padding: 12px 16px; }
